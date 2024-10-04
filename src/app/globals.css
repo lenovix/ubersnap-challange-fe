@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import 'cropperjs/dist/cropper.css';
 
 :root {
   --background: #ffffff;
