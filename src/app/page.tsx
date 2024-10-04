@@ -9,7 +9,7 @@ import { XMarkIcon } from '@heroicons/react/24/solid';
 
 const Home: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [processedImage, setProcessedImage] = useState<string | null>(null);
+  const [, setProcessedImage] = useState<string | null>(null);
 
   const handleImageUpload = (file: File) => {
     const reader = new FileReader();
