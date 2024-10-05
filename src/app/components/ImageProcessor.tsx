@@ -5,6 +5,13 @@ import { ScissorsIcon } from '@heroicons/react/24/solid';
 import UndoRedoButtons from './UndoRedoButtons';
 import 'cropperjs/dist/cropper.css';
 
+declare global {
+  interface Window {
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    cv: any;
+  }
+}
+
 interface ImageProcessorProps {
   imageSrc: string;
   onProcessComplete: (processedImage: string) => void;
@@ -18,12 +25,12 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isCropping, setIsCropping] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const cropperRef = useRef<HTMLImageElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const cropperRef = useRef<Cropper | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    if (window.cv) {
-      console.log('OpenCV Loaded');
+    if (!window.cv) {
+      console.error('OpenCV belum di-load');
     }
   }, []);
 
@@ -48,27 +55,32 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
   };
 
   const applyEffect = (effect: 'grayscale' | 'sepia') => {
-    const imgElement = imgRef.current as HTMLImageElement;
-    if (!imgElement) return;
-
+    const imgElement = imgRef.current;
+    if (!imgElement || !window.cv) return;
+    // @ts-ignore
     const src = cv.imread(imgElement);
+    // @ts-ignore
     const dst = new cv.Mat();
 
     switch (effect) {
       case 'grayscale':
+        // @ts-ignore
         cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
         break;
 
       case 'sepia': {
+        // @ts-ignore
         const sepiaKernel = cv.matFromArray(
           4,
           4,
+          // @ts-ignore
           cv.CV_32F,
           [
             0.272, 0.534, 0.131, 0.0, 0.349, 0.686, 0.168, 0.0, 0.393, 0.769,
             0.189, 0.0, 0.0, 0.0, 0.0, 1.0,
           ]
         );
+        // @ts-ignore
         cv.transform(src, dst, sepiaKernel);
         break;
       }
@@ -77,6 +89,7 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
         break;
     }
 
+    // @ts-ignore
     cv.imshow('outputCanvas', dst);
     const outputCanvas = document.getElementById(
       'outputCanvas'
@@ -89,23 +102,12 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
   };
 
   const handleCrop = () => {
+    // @ts-ignore
     const cropper = cropperRef.current?.cropper;
     if (cropper) {
       const croppedImage = cropper.getCroppedCanvas().toDataURL();
       updateHistory(croppedImage);
       setIsCropping(false);
-
-      const outputCanvas = document.getElementById(
-        'outputCanvas'
-      ) as HTMLCanvasElement;
-      const ctx = outputCanvas.getContext('2d');
-      const img = new Image();
-      img.src = croppedImage;
-      img.onload = () => {
-        outputCanvas.width = img.width;
-        outputCanvas.height = img.height;
-        ctx?.drawImage(img, 0, 0);
-      };
     }
   };
 
@@ -207,6 +209,7 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
               style={{ height: 'auto', width: '100%' }}
               initialAspectRatio={1}
               guides={false}
+              // @ts-ignore
               ref={cropperRef}
               viewMode={1}
               responsive={true}
@@ -216,14 +219,14 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
               <button
                 type="button"
                 onClick={handleCrop}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300"
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
               >
-                Apply Crop
+                Confirm
               </button>
               <button
                 type="button"
                 onClick={() => setIsCropping(false)}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition duration-300"
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
               >
                 Cancel
               </button>
@@ -232,18 +235,19 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
         )}
       </div>
 
-      <div className="flex flex-wrap justify-center space-x-2 mt-4">
+      <div className="flex justify-center space-x-6">
         <button
           type="button"
           onClick={() => applyEffect('grayscale')}
-          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-300"
+          className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900"
         >
           Grayscale
         </button>
+
         <button
           type="button"
           onClick={() => applyEffect('sepia')}
-          className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition duration-300"
+          className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900"
         >
           Sepia
         </button>
@@ -251,9 +255,9 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
         <button
           type="button"
           onClick={() => setIsCropping(true)}
-          className="flex items-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300"
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center"
         >
-          <ScissorsIcon className="h-5 w-5 mr-2" />
+          <ScissorsIcon className="w-5 h-5 mr-2" />
           Crop
         </button>
       </div>
